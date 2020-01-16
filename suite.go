@@ -68,7 +68,7 @@ func GetOrCreateSuite(t testing.TB, name string, opts SuiteOpts) (*Suite, bool) 
 	c := opts.Client
 	if c == nil {
 		var err error
-		c, err = client.NewEnvClient()
+		c, err = client.NewClientWithOpts(client.FromEnv)
 		if err != nil {
 			if opts.Skip {
 				t.Skipf("docker client instantiation failure: %s", err.Error())
@@ -137,7 +137,7 @@ func (s *Suite) Start(ctx context.Context) {
 				select {
 				case <-ctx.Done():
 					printf("(daemon) stopping logging")
-					s.logWatcher.Close()
+					//s.logWatcher.Close()
 					return
 				case msg := <-s.logWatcher.Msg:
 					printf("(daemon) %s", msg.Line)

@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
+	clicfg "github.com/docker/cli/cli/config"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	clicfg "github.com/docker/docker/cli/config"
 	"github.com/docker/docker/client"
 )
 

@@ -8,7 +8,8 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	_ "github.com/lib/pq"
-	"github.com/piotrkowalczuk/testingdock"
+
+	"github.com/m4ksio/testingdock"
 )
 
 func TestContainer_Start(t *testing.T) {

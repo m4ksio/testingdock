@@ -1,11 +1,10 @@
 package testingdock_test
 
 import (
+	"context"
 	"testing"
 
-	"context"
-
-	"github.com/piotrkowalczuk/testingdock"
+	"github.com/m4ksio/testingdock"
 )
 
 func TestNetwork_Start(t *testing.T) {
