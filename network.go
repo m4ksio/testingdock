@@ -4,7 +4,6 @@ import (
 	"context"
 	"sync"
 	"testing"
-
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -64,7 +63,9 @@ func (n *Network) start(ctx context.Context) {
 	}
 	printf("(setup ) %-25s (%s) - network created", n.name, n.id)
 
-	ni, err := n.cli.NetworkInspect(ctx, n.id, false)
+	ni, err := n.cli.NetworkInspect(ctx, n.id, types.NetworkInspectOptions{
+		Verbose: false,
+	})
 	if err != nil {
 		n.cancel()
 		n.t.Fatalf("network inspect failure: %s", err.Error())
