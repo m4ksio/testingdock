@@ -149,6 +149,7 @@ func newContainer(t testing.TB, c *client.Client, opts ContainerOpts) *Container
 		ccfg:               opts.Config,
 		hcfg:               opts.HostConfig,
 		resetF:             opts.Reset,
+		Image:              opts.Config.Image,
 	}
 
 	// set default healthcheck
