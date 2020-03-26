@@ -209,10 +209,11 @@ func (c *Container) start(ctx context.Context) { // nolint: gocyclo
 			c.t.Fatalf("container disconnect failure: %s", err.Error())
 		}
 		printf("(cancel) %-25s (%s) - container disconnected from: %s", c.Name, c.ID, c.network.name)
-		if err := c.cli.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{Force: true}); err != nil {
-			c.t.Fatalf("container removal failure: %s", err.Error())
+		timeout := time.Second*5
+		if err := c.cli.ContainerStop(ctx, c.ID, &timeout); err != nil {
+			c.t.Fatalf("container stop failure: %s", err.Error())
 		}
-		printf("(cancel) %-25s (%s) - container removed", c.Name, c.ID)
+		printf("(cancel) %-25s (%s) - container stopped", c.Name, c.ID)
 	}
 
 	// start the container finally
