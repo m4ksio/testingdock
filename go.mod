@@ -1,4 +1,4 @@
-module github.com/m4ksio/testingdock
+module github.com/dapperlabs/testingdock
 
 go 1.13
 

@@ -9,7 +9,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	_ "github.com/lib/pq"
 
-	"github.com/m4ksio/testingdock"
+	"github.com/dapperlabs/testingdock"
 )
 
 func TestContainer_Start(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/m4ksio/testingdock"
+	"github.com/dapperlabs/testingdock"
 )
 
 func TestNetwork_Start(t *testing.T) {
