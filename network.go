@@ -184,3 +184,7 @@ func (n *Network) reset(ctx context.Context) {
 	}
 	printf("(reset ) %-25s (%s) - network reseted in %s", n.name, n.id, time.Since(now))
 }
+
+func (n *Network) ID() string {
+    return n.id
+}
