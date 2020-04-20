@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	_ "github.com/lib/pq"
 
@@ -13,9 +15,20 @@ import (
 )
 
 func TestContainer_Start(t *testing.T) {
+	// set up docker client
+	cli, err := client.NewClientWithOpts(
+		client.FromEnv,
+		client.WithAPIVersionNegotiation(),
+	)
+	if err != nil {
+		t.Fatalf("error creating docker client: %s", err.Error())
+	}
+
 	// create suite
 	name := "TestContainer_Start"
-	s, ok := testingdock.GetOrCreateSuite(t, name, testingdock.SuiteOpts{})
+	s, ok := testingdock.GetOrCreateSuite(t, name, testingdock.SuiteOpts{
+		Client: cli,
+	})
 	if ok {
 		t.Fatal("this suite should not exists yet")
 	}
@@ -39,6 +52,7 @@ func TestContainer_Start(t *testing.T) {
 		ForcePull: false,
 		Config: &container.Config{
 			Image: "postgres:9.6",
+			Env:   []string{"POSTGRES_HOST_AUTH_METHOD=trust"},
 		},
 		HostConfig: &container.HostConfig{
 			PortBindings: nat.PortMap{
@@ -79,6 +93,7 @@ func TestContainer_Start(t *testing.T) {
 		ForcePull: true,
 		Config: &container.Config{
 			Image: "postgres:9.6",
+			Env:   []string{"POSTGRES_HOST_AUTH_METHOD=trust"},
 		},
 	})
 
@@ -91,7 +106,10 @@ func TestContainer_Start(t *testing.T) {
 
 	// start the network, this also starts the containers
 	s.Start(context.TODO())
-	defer s.Close()
+	defer func() {
+		s.Close()
+		s.Remove()
+	}()
 
 	// test stuff within the database
 	testQueries(t, db)
@@ -99,6 +117,29 @@ func TestContainer_Start(t *testing.T) {
 	s.Reset(context.TODO())
 
 	testQueries(t, db)
+
+	if err = s.Close(); err != nil {
+		t.Fatalf("could not close containers: %s", err.Error())
+	}
+
+	list0, err := cli.ContainerList(context.TODO(), types.ContainerListOptions{All: true})
+	if err != nil {
+		t.Fatalf("could not retreive container list: %s", err.Error())
+	}
+
+	if err = s.Remove(); err != nil {
+		t.Fatalf("could not remove containers: %s", err.Error())
+	}
+
+	list1, err := cli.ContainerList(context.TODO(), types.ContainerListOptions{All: true})
+	if err != nil {
+		t.Fatalf("could not retreive container list: %s", err.Error())
+	}
+
+	if len(list0) != len(list1)+3 {
+		t.Fatalf("expected Remove to remove 3 containers from container list (len before %v, len after %v)", len(list0),
+			len(list1))
+	}
 }
 
 func testQueries(t *testing.T, db *sql.DB) {

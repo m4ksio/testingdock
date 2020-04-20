@@ -80,8 +80,7 @@ func ResetCustom(fn func() error) ResetFunc {
 // ContainerOpts is an option struct for creating a docker container
 // configuration.
 type ContainerOpts struct {
-	ForcePull bool
-	// AutoRemove is always set to true
+	ForcePull  bool
 	Config     *container.Config
 	HostConfig *container.HostConfig
 	Name       string
@@ -116,6 +115,7 @@ type Container struct { // nolint: maligned
 	cancel   func()
 	resetF   ResetFunc
 	closed   bool
+	removed  bool
 }
 
 // Creates a new container configuration with the given options.
@@ -125,11 +125,9 @@ func newContainer(t testing.TB, c *client.Client, opts ContainerOpts) *Container
 		opts.HealthCheckTimeout = 30 * time.Second
 	}
 
-	// always autoremove
 	if opts.HostConfig == nil {
 		opts.HostConfig = &container.HostConfig{}
 	}
-	opts.HostConfig.AutoRemove = true
 
 	// set testingdock label
 	opts.Config.Labels = createTestingLabel()
@@ -175,7 +173,7 @@ func (c *Container) start(ctx context.Context) { // nolint: gocyclo
 	}
 
 	if len(images) == 0 || c.forcePull {
-		printf("(setup) %-25s - pulling image", c.ccfg.Image)
+		printf("(setup ) %-25s - pulling image", c.ccfg.Image)
 		img, err := c.imagePull(ctx)
 		if err != nil {
 			c.t.Fatalf("image downloading failure of '%s': %s", c.ccfg.Image, err.Error())
@@ -209,7 +207,7 @@ func (c *Container) start(ctx context.Context) { // nolint: gocyclo
 			c.t.Fatalf("container disconnect failure: %s", err.Error())
 		}
 		printf("(cancel) %-25s (%s) - container disconnected from: %s", c.Name, c.ID, c.network.name)
-		timeout := time.Second*5
+		timeout := time.Second * 5
 		if err := c.cli.ContainerStop(ctx, c.ID, &timeout); err != nil {
 			c.t.Fatalf("container stop failure: %s", err.Error())
 		}
@@ -220,6 +218,9 @@ func (c *Container) start(ctx context.Context) { // nolint: gocyclo
 	if err = c.cli.ContainerStart(ctx, c.ID, types.ContainerStartOptions{}); err != nil {
 		c.t.Fatalf("container start failure: %s", err.Error())
 	}
+
+	c.closed = false
+	c.removed = false
 
 	printf("(setup ) %-25s (%s) - container started", c.Name, c.ID)
 
@@ -344,6 +345,43 @@ func (c *Container) close() error {
 	return nil
 }
 
+// remove removes/cleans up the container
+func (c *Container) remove() {
+	if !c.closed {
+		c.t.Fatalf("container removal failed, please close containers first")
+	}
+
+	if SpawnSequential {
+		for _, cont := range c.children {
+			cont.remove() // nolint: errcheck
+		}
+	} else {
+		var wg sync.WaitGroup
+
+		wg.Add(len(c.children))
+		for _, cont := range c.children {
+			go func(cont *Container) {
+				defer wg.Done()
+				cont.remove() // nolint: errcheck
+			}(cont)
+		}
+		wg.Wait()
+	}
+
+	if c.removed {
+		return
+	}
+
+	if err := c.cli.ContainerRemove(context.TODO(), c.ID, types.ContainerRemoveOptions{
+		Force:         true,
+		RemoveVolumes: true,
+	}); err != nil {
+		c.t.Fatalf("container removal failure: %s", err.Error())
+	}
+	c.removed = true
+	printf("(remove ) %-25s (%s) - container removed/cleaned up", c.Name, c.ID)
+}
+
 // After adds a child container (dependency, sort of)
 // to the current container configuration in the same network.
 func (c *Container) After(cc *Container) {
@@ -358,6 +396,10 @@ func (c *Container) reset(ctx context.Context) {
 	if err := c.resetF(ctx, c); err != nil {
 		c.t.Fatalf("container reset failure: %s", err.Error())
 	}
+
+	c.closed = false
+	c.removed = false
+
 	c.executeHealthCheck(ctx)
 
 	for _, cc := range c.children {

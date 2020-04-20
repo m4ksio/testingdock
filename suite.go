@@ -161,3 +161,12 @@ func (s *Suite) Close() error {
 
 	return nil
 }
+
+// Remove removes all the containers in the network.
+func (s *Suite) Remove() error {
+	if s.network != nil {
+		return s.network.remove()
+	}
+
+	return nil
+}
