@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/m4ksio/testingdock"
+	"github.com/dapperlabs/testingdock"
 )
 
 func TestNetwork_Start(t *testing.T) {
@@ -19,5 +19,9 @@ func TestNetwork_Start(t *testing.T) {
 
 	if err := s.Close(); err != nil {
 		t.Fatalf("Failed to close a network: %s", err.Error())
+	}
+
+	if err := s.Remove(); err != nil {
+		t.Fatalf("Failed to remove a network: %s", err.Error())
 	}
 }

@@ -168,6 +168,22 @@ func (n *Network) close() error {
 	return nil
 }
 
+// remove removes all the containers in the network.
+func (n *Network) remove() error {
+	var wg sync.WaitGroup
+
+	wg.Add(len(n.children))
+	for _, cont := range n.children {
+		go func(cont *Container) {
+			defer wg.Done()
+			cont.remove() // nolint: errcheck
+		}(cont)
+	}
+	wg.Wait()
+
+	return nil
+}
+
 // After adds a child container to the current network configuration.
 // These containers then kind of "depend" on the network and will
 // be closed when the network closes.
@@ -183,4 +199,8 @@ func (n *Network) reset(ctx context.Context) {
 		c.reset(ctx)
 	}
 	printf("(reset ) %-25s (%s) - network reseted in %s", n.name, n.id, time.Since(now))
+}
+
+func (n *Network) ID() string {
+	return n.id
 }
